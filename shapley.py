@@ -68,7 +68,6 @@ def main():
         bsz = 8
         base_qid_set = set([item['qid'] for item in S_t])
         value_data = [a for a in data if a['qid'] not in base_qid_set]
-        import pdb; pdb.set_trace()
         random.shuffle(value_data) 
         for pos in tqdm(range(0, len(value_data), bsz), desc='compute set value'):
             value_set = data[pos:(pos+bsz)]
