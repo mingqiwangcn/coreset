@@ -64,7 +64,7 @@ def main():
         S_t = random.sample(data, k)
         print('evaluating base set')
         accuracy_base = evaluate(S_t)
-        print('%d accuracy_base=%.4f' % (t, accuracy_base))
+        print('%d accuracy base=%.4f' % (t, accuracy_base))
         bsz = 8
         base_qid_set = set([item['qid'] for item in S_t])
         value_data = [a for a in data if a['qid'] not in base_qid_set]
@@ -72,8 +72,9 @@ def main():
         for pos in tqdm(range(0, len(value_data), bsz), desc='compute set value'):
             value_set = data[pos:(pos+bsz)]
             merged_set = S_t + value_set
+            print('evaluating merged set')
             accuracy_merged = evaluate(merged_set)
-            print('%d accuracy_merged=%.4f' % (t, accuracy_merged))
+            print('%d accuracy merged=%.4f' % (t, accuracy_merged))
             accuracy_improved = (accuracy_merged - accuracy_base) / len(value_set)
             for value_item in value_set:
                 shapley_item = shapley_dict[value_item['qid']]
