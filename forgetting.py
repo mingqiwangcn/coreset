@@ -28,37 +28,43 @@ def get_train_opt():
     opt.name=train_name
     opt.checkpoint_dir=data_dir
     opt.use_auto_steps = 1
-    opt.epoch_ckp_num = 1 
+    opt.epoch_ckp_num = 2 
+    opt.max_epoch = 10
     return opt
 
 data_stat = {}
 prev_acc_key = 'prev_acc'
 forgetting_key = 'forgetting'
+update_cnt_key = 'update_cnt'
 
 def update_forgettings(qid, acc):
     if qid not in data_stat:
         data_stat[qid] = {
             'qid':qid,
             prev_acc_key:0,
-            forgetting_key:0
+            forgetting_key:0,
+            update_cnt_key:0
         }
     item = data_stat[qid]
     if item[prev_acc_key] > acc:
         item[forgetting_key] += 1
     item[prev_acc_key] = acc
+    item[update_cnt_key] += 1
 
 class CoresetMethod:
     def __init__(self, out_dir):
         self.call_back = train_reader.evaluate_train
-        #self.out_dir = out_dir
-        #self.counter = 0
+        self.out_dir = out_dir
 
     def do(self, dataset, idxes, coreset_metrics):
         for offset, idx in enumerate(idxes):
             qid = dataset.get_example(idx)['qid']
             acc = coreset_metrics[offset] 
             update_forgettings(qid, acc)
-    
+
+    def on_checkpoint(self, step):
+        write_stat(self.out_dir, step)
+         
 def main():
     opt = get_train_opt()
     out_dir = os.path.join(opt.checkpoint_dir, opt.name)
@@ -69,8 +75,11 @@ def main():
     train_reader.main(opt, coreset_method=method)
     write_stat(out_dir)
 
-def write_stat(out_dir):
-    out_stat_file = os.path.join(out_dir, 'forgetting.jsonl')
+def write_stat(out_dir, step=None):
+    file_name = 'forgetting.jsonl'
+    if step is not None:
+        file_name = 'forgetting_step_%d.jsonl' % step
+    out_stat_file = os.path.join(out_dir, file_name)
     with open(out_stat_file, 'w') as f_o:
         for qid in tqdm(data_stat):
             item_stat = data_stat[qid]
