@@ -30,6 +30,7 @@ def get_data():
     data.append([[2.3, 3.5], 1])
     data.append([[3.2, 3.6], 1])
     data.append([[6.2, 8.6], 1])
+
     data.append([[1.6, 0.9], 0])
     data.append([[1.9, 0.9], 0])
     data.append([[0.9, 0.5], 0])
@@ -39,6 +40,7 @@ def get_data():
     return data
 
 def main():
+    torch.manual_seed(0)
     model = ExampleModel()
     loss_func = ExampleLoss()
     data = get_data()
@@ -56,8 +58,18 @@ def main():
             scores = model(batch_X)
             loss = loss_func(scores, batch_Y)
             print('step=%d loss=%.2f' % (global_steps, loss.item()))
+           
+            trace(model, '1') 
             loss.backward()
+            trace(model, '2')
             optimizer.step()
+            trace(model, '3')
+
+def trace(model, tag):
+    for name, param in model.named_parameters():
+        import pdb; pdb.set_trace()
+        if param.requires_grad:
+            print(name, param) 
 
 if __name__ == '__main__':
     main()
