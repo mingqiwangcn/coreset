@@ -19,9 +19,9 @@ def get_train_opt():
         os.makedirs(data_dir)
     percentage = 5
     train_name = 'train_%d' % percentage
-    train_file = '../fusion_reader/open_domain_data/NQ/coreset/train_data_percent_%d.jsonl' % percentage
+    train_file = '../data/NQ/coreset/train_data_percent_%d.jsonl' % percentage
     opt.train_data = train_file
-    opt.eval_data = '../fusion_reader/open_domain_data/NQ/coreset/dev_data.jsonl'
+    opt.eval_data = '../data/NQ/coreset/dev_data.jsonl'
     opt.model_size= 'base'
     opt.per_gpu_batch_size = 1 
     opt.n_context = 10
