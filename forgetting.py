@@ -29,7 +29,7 @@ def get_train_opt():
     opt.checkpoint_dir=data_dir
     opt.use_auto_steps = 1
     opt.epoch_ckp_num = 2 
-    opt.max_epoch = 10
+    opt.max_epoch = 5
     return opt
 
 data_stat = {}
@@ -37,30 +37,34 @@ prev_acc_key = 'prev_acc'
 forgetting_key = 'forgetting'
 update_cnt_key = 'update_cnt'
 
-def update_forgettings(qid, acc):
+def update_forgettings(qid, acc, step):
     if qid not in data_stat:
         data_stat[qid] = {
             'qid':qid,
             prev_acc_key:0,
             forgetting_key:0,
-            update_cnt_key:0
+            update_cnt_key:0,
+            'first_correct_step':None
         }
     item = data_stat[qid]
     if item[prev_acc_key] > acc:
         item[forgetting_key] += 1
     item[prev_acc_key] = acc
     item[update_cnt_key] += 1
+    if acc > 0:
+        if item['first_correct_step'] is None:
+            item['first_correct_step'] = step
 
 class CoresetMethod:
     def __init__(self, out_dir):
         self.call_back = train_reader.evaluate_train
         self.out_dir = out_dir
 
-    def do(self, dataset, idxes, coreset_metrics):
+    def do(self, dataset, idxes, coreset_metrics, step):
         for offset, idx in enumerate(idxes):
             qid = dataset.get_example(idx)['qid']
             acc = coreset_metrics[offset] 
-            update_forgettings(qid, acc)
+            update_forgettings(qid, acc, step)
 
     def on_checkpoint(self, step):
         write_stat(self.out_dir, step)
