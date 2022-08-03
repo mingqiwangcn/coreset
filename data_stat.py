@@ -22,7 +22,7 @@ def read_unforgetting(step):
     return data
 
 
-def gen_coreset(coreset_tag):
+def gen_coreset(coreset_tag, up_to_rows):
     data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
     qid_set = set()
     unforgetting_file = './output/forgetting/train_5/unforgetting.jsonl'
@@ -32,7 +32,7 @@ def gen_coreset(coreset_tag):
             item = json.loads(line)
             qid_set.add(item['qid'])
             row += 1
-            if row >= 300:
+            if row >= up_to_rows:
                 break
     
     out_file = './output/forgetting/train_5/coreset/train_5_coreset_%s.jsonl' % coreset_tag
@@ -46,7 +46,7 @@ def gen_coreset(coreset_tag):
 
 def main():
     #read_unforgetting(5937)
-    gen_coreset('new_3')
+    gen_coreset('fg_1000', 1000)
 
 if __name__ == '__main__':
     main()
