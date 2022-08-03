@@ -30,6 +30,7 @@ def get_train_opt():
     opt.use_auto_steps = 1
     opt.epoch_ckp_num = 2 
     opt.max_epoch = 5
+    opt.per_gpu_eval_batch_size = 60 
     return opt
 
 data_stat = {}
