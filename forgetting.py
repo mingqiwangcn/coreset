@@ -85,7 +85,7 @@ def write_stat(out_dir, step=None):
         file_name = 'forgetting_step_%d.jsonl' % step
     out_stat_file = os.path.join(out_dir, file_name)
     with open(out_stat_file, 'w') as f_o:
-        for qid in tqdm(data_stat):
+        for qid in data_stat:
             item_stat = data_stat[qid]
             f_o.write(json.dumps(item_stat) + '\n')
 
