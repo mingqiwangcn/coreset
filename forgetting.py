@@ -72,9 +72,10 @@ class CoresetMethod:
             self.coreset_2_other(item, step)
     
     def get_coreset(self, train_qid_batch):
-        for qid in train_qid_batch:
-            if qid not in self.coreset_queue:
-                self.other_2_coreset(qid)
+        if train_qid_batch is not None:
+            for qid in train_qid_batch:
+                if qid not in self.coreset_queue:
+                    self.other_2_coreset(qid)
         qid_lst = [a for a in self.coreset_queue]
         assert (len(qid_lst) > 0)
         return qid_lst
