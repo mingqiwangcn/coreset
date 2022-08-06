@@ -33,14 +33,16 @@ def get_train_opt():
     opt.per_gpu_eval_batch_size = 60
     return opt
 
-prev_acc_key = 'prev_acc'
-forgetting_key = 'forgetting'
-update_cnt_key = 'update_cnt'
-first_correct_step_key = 'first_correct_step'
-not_change_steps_key = 'not_change_steps'
-reschedule_step_key = 'reschedule_step'
 
 class CoresetMethod:
+    Prev_Acc_Key = 'prev_acc'
+    Forgetting_Key = 'forgetting'
+    Update_Cnt_Key = 'update_cnt'
+    First_Correct_Step_Key = 'first_correct_step'
+    Not_Change_Steps_Key = 'not_change_steps'
+    Reschedule_Step_Key = 'reschedule_step'
+    Flip_Cnt_Key = 'flip_cnt'
+    
     def __init__(self, out_dir):
         self.data_stat = {}
         self.call_back = train_reader.evaluate_train
@@ -49,37 +51,44 @@ class CoresetMethod:
     def update_forgettings(self, qid, acc, step_info):
         step = step_info['step']
         item = self.data_stat[qid]
-        if item[prev_acc_key] is not None:
-            if item[prev_acc_key] > acc:
-                item[forgetting_key] += 1
-                item[not_change_steps_key] = 0 
-            elif item[prev_acc_key] == acc:
-                item[not_change_steps_key] += 1
+        if item[CoresetMethod.Prev_Acc_Key] is not None:
+            if item[CoresetMethod.Prev_Acc_Key] > acc:
+                item[CoresetMethod.Forgetting_Key] += 1
+                item[CoresetMethod.Not_Change_Steps_Key] = 0
+                item[CoresetMethod.Flip_Cnt_Key] += 1 
+            elif item[CoresetMethod.Prev_Acc_Key] == acc:
+                item[CoresetMethod.Not_Change_Steps_Key] += 1
             else:
-                item[not_change_steps_key] = 0
+                item[CoresetMethod.Not_Change_Steps_Key] = 0
+                item[CoresetMethod.Flip_Cnt_Key] += 1
 
-        item[prev_acc_key] = acc
-        item[update_cnt_key] += 1
+        item[CoresetMethod.Prev_Acc_Key] = acc
+        item[CoresetMethod.Update_Cnt_Key] += 1
         if acc > 0:
-            if item[first_correct_step_key] is None:
-                item[first_correct_step_key] = step
+            if item[CoresetMethod.First_Correct_Step_Key] is None:
+                item[CoresetMethod.First_Correct_Step_Key] = step
         
-        if item[not_change_steps_key] >= 2:
+        if item[CoresetMethod.Not_Change_Steps_Key] >= 2:
             self.coreset_2_other(item, step)
     
-    def get_coreset(self):
+    def get_coreset(self, train_qid_batch):
+        for qid in train_qid_batch:
+            if qid not in self.coreset_queue:
+                self.other_2_coreset(qid)
         qid_lst = [a for a in self.coreset_queue]
+        assert (len(qid_lst) > 0)
         return qid_lst
      
     def coreset_2_other(self, item, step):
         qid = item['qid']
         del self.coreset_queue[qid] 
         self.other_queue[qid] = 1
-        item[reschedule_step_key] = step + 16 
+        item[CoresetMethod.Reschedule_Step_Key] = step + 32 
         
     def other_2_coreset(self, qid):
         del self.other_queue[qid]
-        self.coreset_queue[qid] = 1 
+        self.coreset_queue[qid] = 1
+        self.data_stat[qid][CoresetMethod.Not_Change_Steps_Key] = 0 
     
     def init_data(self, data):
         self.coreset_queue = {}
@@ -88,19 +97,20 @@ class CoresetMethod:
             qid = item['qid']
             self.data_stat[qid] = {
                 'qid':qid,
-                prev_acc_key:None,
-                forgetting_key:0,
-                update_cnt_key:0,
-                first_correct_step_key:None,
-                not_change_steps_key:0,
-                reschedule_step_key:None
+                CoresetMethod.Prev_Acc_Key:None,
+                CoresetMethod.Forgetting_Key:0,
+                CoresetMethod.Update_Cnt_Key:0,
+                CoresetMethod.First_Correct_Step_Key:None,
+                CoresetMethod.Not_Change_Steps_Key:0,
+                CoresetMethod.Reschedule_Step_Key:None,
+                CoresetMethod.Flip_Cnt_Key:0
             }
             self.coreset_queue[qid] = 1
     
     def reschedule(self, step):
         qid_lst = [a for a in self.other_queue]
         for qid in qid_lst:
-            if step >= self.data_stat[qid][reschedule_step_key]:
+            if step >= self.data_stat[qid][CoresetMethod.Reschedule_Step_Key]:
                 self.other_2_coreset(qid)
 
     def do(self, dataset, idxes, coreset_metrics, step_info):
@@ -129,7 +139,6 @@ def main():
         return
     method = CoresetMethod(out_dir)
     train_reader.main(opt, coreset_method=method)
-
 
 if __name__ == '__main__':
     main()
