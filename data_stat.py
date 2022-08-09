@@ -1,6 +1,44 @@
 import json
 import glob
+import csv
 
+def get_report():
+    #data_map = read_data()
+    data_file = './output/forgetting/train_5/forgetting_sorted.jsonl'
+    col_names = ['forgetting', 'count']
+    stat_map = {}
+    with open(data_file) as f:
+        for line in f:
+            item = json.loads(line)
+            fogetting = item['forgetting']
+            if fogetting == 0:
+                if item['first_correct_step'] is not None:
+                    key = '0-learnable'
+                else:
+                    key = '0-unlearnable'
+            else:
+                key = '%d' % fogetting
+            if key not in stat_map:
+                stat_map[key] = 0
+            stat_map[key] += 1
+    
+    
+    with open('forgetting_stat.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(col_names)
+        for key in stat_map:
+            writer.writerow([key, stat_map[key]])
+     
+
+def read_data():
+    data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
+    data_map = {}
+    with open(forgetting_file) as f:
+        for line in f:
+            item = json.loads(line)
+            qid = item['qid']
+            data_map[qid] = item
+    return data_map
 
 def gen_forgetting_data(step):
     data_learnable = []
@@ -50,9 +88,18 @@ def remove_zero_forgetting(data):
             qid_set.add(item['qid'])
     return qid_set
 
+def use_unlearnable_only(data):
+    qid_set = set()
+    for item in data:
+        if item['first_correct_step'] is None:
+            qid_set.add(item['qid'])
+    return qid_set
+
 def main():
     #gen_forgetting_data(11874) 
-    gen_coreset('fg_gt_0', None, remove_zero_forgetting)
+    #gen_coreset('fg_gt_0', None, remove_zero_forgetting)
+    #gen_coreset('fg_unlearnable', None, use_unlearnable_only)
+    get_report()
 
 if __name__ == '__main__':
     main()
