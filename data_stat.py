@@ -2,51 +2,57 @@ import json
 import glob
 
 
-
-def read_unforgetting(step):
-    data = []
+def gen_forgetting_data(step):
+    data_learnable = []
+    data_unlearnable = []
     data_file = './output/forgetting/train_5/forgetting_step_%d.jsonl' % step
     with open(data_file) as f:
         for line in f:
             item = json.loads(line)
-            qid = item['qid']
-            prev_acc = int(item['prev_acc'])
-            forgetting = int(item['forgetting'])
-            if (not forgetting) and prev_acc:
-                data.append(item)
+            if item['first_correct_step'] is not None:
+                data_learnable.append(item)
+            else:
+                data_unlearnable.append(item)
 
-    data_sorted = sorted(data, key=lambda a: a['first_correct_step'])
-    with open('./output/forgetting/train_5/unforgetting.jsonl', 'w') as f_o:
-        for item in data_sorted:
+    sort_key = lambda a: (a['forgetting'], a['first_correct_step'])
+    data_learnable_sorted = sorted(data_learnable, key=sort_key)
+    
+    out_data = data_learnable_sorted + data_unlearnable
+    with open('./output/forgetting/train_5/forgetting_sorted.jsonl', 'w') as f_o:
+        for item in out_data:
             f_o.write(json.dumps(item) + '\n')
-    return data
 
 
-def gen_coreset(coreset_tag, up_to_rows):
+def gen_coreset(coreset_tag, up_to_rows, strategy_func):
     data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
-    qid_set = set()
-    unforgetting_file = './output/forgetting/train_5/unforgetting.jsonl'
-    with open(unforgetting_file) as f:
-        row = 0
+    data = []
+    forgetting_file = './output/forgetting/train_5/forgetting_sorted.jsonl'
+    with open(forgetting_file) as f:
         for line in f:
             item = json.loads(line)
-            qid_set.add(item['qid'])
-            row += 1
-            if row >= up_to_rows:
-                break
+            data.append(item)
     
+    out_qid_set = strategy_func(data)
     out_file = './output/forgetting/train_5/coreset/train_5_coreset_%s.jsonl' % coreset_tag
     f_o = open(out_file, 'w')
     with open(data_file) as f_2:
         for line in f_2:
             item = json.loads(line)
-            if item['qid'] not in qid_set:
+            if item['qid'] in out_qid_set:
                 f_o.write(line)
     f_o.close()
 
+
+def remove_zero_forgetting(data):
+    qid_set = set()
+    for item in data:
+        if item['forgetting'] > 0:
+            qid_set.add(item['qid'])
+    return qid_set
+
 def main():
-    #read_unforgetting(5937)
-    gen_coreset('fg_1000', 1000)
+    #gen_forgetting_data(11874) 
+    gen_coreset('fg_gt_0', None, remove_zero_forgetting)
 
 if __name__ == '__main__':
     main()
