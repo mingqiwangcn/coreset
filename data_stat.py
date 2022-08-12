@@ -1,10 +1,155 @@
 import json
 import glob
+from tqdm import tqdm
 import csv
 import numpy as np
+import os
+import glob
 
-def get_report():
-    #data_map = read_data()
+def get_steps(upto_step):
+    data_file = './output/forgetting/train_5/forgetting_step_*.jsonl'
+    file_lst = glob.glob(data_file)
+    
+    step_lst = []
+    for file_info in file_lst:
+        file_base_name = os.path.basename(file_info)
+        pos_1 = file_base_name.index('_step_') + len('_step_')
+        pos_2 = file_base_name.rindex('.jsonl')
+        step = int(file_base_name[pos_1:pos_2])
+        if step <= upto_step:
+            step_lst.append(step)
+    step_lst.sort()
+    return step_lst
+
+def get_step_forgettings(step):
+    data_map = {}
+    data_file = './output/forgetting/train_5/forgetting_step_%d.jsonl' % step
+    with open(data_file) as f:
+        for line in f:
+            item = json.loads(line)
+            qid = item['qid']
+            data_map[qid] = item
+    return data_map 
+
+def verify_serials(upto_step):
+    forgettings = get_step_forgettings(upto_step) 
+    serial_map = get_forgetting_serials(upto_step) 
+    serial_sum_data = {}
+    for step in serial_map:
+        for qid in serial_map[step]:
+            if qid not in serial_sum_data:
+                serial_sum_data[qid] = 0
+            serial_sum_data[qid] += 1
+    
+    for qid in forgettings:
+        item = forgettings[qid]
+        if item['forgetting'] > 0:
+            #import pdb; pdb.set_trace()
+            assert(serial_sum_data[qid] == item['forgetting'])
+    
+    print('verify_serials ok')
+
+def get_forgetting_serials(upto_step):
+    serial_map = {}
+    step_lst = get_steps(upto_step)
+    for step in tqdm(step_lst, desc='serial data'):
+        if step < 1:
+            continue
+        serial_map[step] = []
+        pre_step_forgettings = get_step_forgettings(step - 1)
+        cur_step_forgettings = get_step_forgettings(step) 
+        for qid in cur_step_forgettings:
+            pre_item = pre_step_forgettings[qid]
+            cur_item = cur_step_forgettings[qid]
+            if cur_item['prev_acc'] < pre_item['prev_acc']:
+                serial_map[step].append(qid)
+   
+    return serial_map 
+
+def sum_block_forgettings(serial_map, step_blocks):
+    forgettings = 0
+    for step in step_blocks:
+        forgettings += len(serial_map[step]['forgetting_points'])
+    return forgettings 
+
+def write_serial_forgettings(upto_step):
+    serial_map = get_forgetting_serials(upto_step)
+    step_sorted = sorted(list(serial_map.keys()))
+    with open('forgetting_serials.jsonl', 'w') as f_o:
+        for step in step_sorted:
+            out_item = {
+                'step':step,
+                'forgetting_points':serial_map[step]
+            }
+            f_o.write(json.dumps(out_item) + '\n') 
+
+def read_serial_forgettings():
+    data_map = {}
+    data_file = 'forgetting_serials.jsonl'
+    with open(data_file) as f:
+        for line in f:
+            item = json.loads(line)
+            step = item['step']
+            data_map[step] = item
+    return data_map
+
+def gen_serial_report():
+    serial_data = read_serial_forgettings()
+    col_names = ['step', 'forgetting']
+    step_sorted = sorted(list(serial_data.keys()))
+    with open('forgetting_serials_step_detail.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(col_names)
+        for step in step_sorted:
+            forgettings = len(serial_data[step]['forgetting_points'])
+            writer.writerow([str(step), forgettings])
+
+def gen_point_step_forgettings():
+    serial_data = read_serial_forgettings()
+    point_step_map = {}
+    for step in serial_data:
+        data_points = serial_data[step]['forgetting_points']
+        for qid in data_points:
+            if qid not in point_step_map:
+                point_step_map[qid] = []
+            point_step_map[qid].append(step)
+    
+    forgetting_point_map = {}
+    for qid in point_step_map:
+        forgetting_cnt = len(point_step_map[qid])
+        if forgetting_cnt not in forgetting_point_map:
+            forgetting_point_map[forgetting_cnt] = []
+        forgetting_point_map[forgetting_cnt].append(qid)
+   
+    forgetting_lst = sorted(list(forgetting_point_map.keys()))
+    for forgetting in forgetting_lst:
+        out_file = './point_forgettings/point_forgettings_%d.jsonl' % forgetting
+        with open(out_file, 'w') as f_o:
+            points = forgetting_point_map[forgetting]
+            for qid in points:
+                steps = point_step_map[qid]
+                for step in steps:
+                    out_item = {
+                        'point':qid,
+                        'step':step
+                    }
+                    f_o.write(json.dumps(out_item) + '\n')
+
+def gen_serial_block_report(block_size):
+    serial_data = read_serial_forgettings()
+    step_sorted = sorted(list(serial_data.keys()))
+    col_names = ['step', 'forgetting']
+    with open('forgetting_serials_block_%d.csv' % block_size, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(col_names)
+        for offset in range(0, len(step_sorted), block_size):
+            step_block_desc = '%d-%d' % (offset, offset + block_size - 1)
+            step_blocks = step_sorted[offset:(offset+block_size)]
+            forgettings = sum_block_forgettings(serial_data, step_blocks)
+            mean_forgettings = forgettings / len(step_blocks)
+            writer.writerow([step_block_desc, mean_forgettings])
+
+def get_forgetting_dist():
     data_file = './output/forgetting/train_5/forgetting_sorted.jsonl'
     col_names = ['forgetting', 'count']
     stat_map = {}
@@ -23,7 +168,6 @@ def get_report():
                 stat_map[key] = 0
             stat_map[key] += 1
     
-    
     with open('forgetting_stat.csv', 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(col_names)
@@ -40,6 +184,7 @@ def read_data():
             qid = item['qid']
             data_map[qid] = item
     return data_map
+
 
 def gen_forgetting_data(step):
     update_cnt_lst = [] 
@@ -83,6 +228,7 @@ def gen_forgetting_data(step):
            np.median(forgetting_lst))
     )
 
+
 def gen_coreset(coreset_tag, up_to_rows, strategy_func):
     data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
     data = []
@@ -110,12 +256,14 @@ def remove_zero_forgetting(data):
             qid_set.add(item['qid'])
     return qid_set
 
+
 def use_unlearnable_only(data):
     qid_set = set()
     for item in data:
         if item['first_correct_step'] is None:
             qid_set.add(item['qid'])
     return qid_set
+
 
 def use_learnable_only(data):
     qid_set = set()
@@ -124,12 +272,18 @@ def use_learnable_only(data):
             qid_set.add(item['qid'])
     return qid_set
 
+
 def main():
-    gen_forgetting_data(11874) 
+    #get_forgetting_dist(11874) 
     #gen_coreset('fg_gt_0', None, remove_zero_forgetting)
     #gen_coreset('fg_unlearnable', None, use_unlearnable_only)
     #gen_coreset('fg_learnable', None, use_learnable_only)
-    #get_report()
+    #verify_serials(11874)
+    #write_serial_forgettings(11874)
+    #gen_serial_report()
+    #gen_serial_block_report(200)
+
+    gen_point_step_forgettings()
 
 if __name__ == '__main__':
     main()
