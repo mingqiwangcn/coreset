@@ -14,14 +14,14 @@ def get_train_opt():
     options.add_reader_options()
     options.add_optim_options()
     opt = options.parse()
-    data_dir = 'output/forgetting/%s' % args.dataset
+    data_dir = 'output/forgetting/%s' % opt.dataset
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     percentage = 5
     train_name = 'train_%d' % percentage
-    train_file = '../data/%s/coreset/train_data_percent_%d.jsonl' % (args.dataset, percentage)
+    train_file = '../data/%s/coreset/train_data_percent_%d.jsonl' % (opt.dataset, percentage)
     opt.train_data = train_file
-    opt.eval_data = '../data/%s/coreset/dev_data.jsonl' % args.dataset
+    opt.eval_data = '../data/%s/coreset/dev_data.jsonl' % opt.dataset
     opt.model_size= 'base'
     opt.per_gpu_batch_size = 1 
     opt.n_context = 10
@@ -46,7 +46,8 @@ class CoresetMethod:
     def __init__(self, out_dir):
         self.data_stat = {}
         self.call_back = train_reader.evaluate_train
-        self.out_dir = out_dir
+        step_data_dir = os.path.join(out_dir, 'step_data')
+        self.out_dir = step_data_dir
             
     def update_forgettings(self, qid, acc, step_info):
         step = step_info['step']
@@ -94,6 +95,8 @@ class CoresetMethod:
     def init_data(self, data):
         self.coreset_queue = {}
         self.other_queue = {}
+        if not os.path.isdir(self.out_dir):
+            os.makedirs(self.out_dir)
         for idx, item in enumerate(data):
             qid = item['qid']
             self.data_stat[qid] = {
@@ -133,8 +136,7 @@ class CoresetMethod:
                 item_stat = self.data_stat[qid]
                 f_o.write(json.dumps(item_stat) + '\n')
 def main():
-    args = get_args()
-    opt = get_train_opt(args)
+    opt = get_train_opt()
     out_dir = os.path.join(opt.checkpoint_dir, opt.name)
     if os.path.isdir(out_dir):
         print('%s already exists' % out_dir)
@@ -142,11 +144,6 @@ def main():
     method = CoresetMethod(out_dir)
     train_reader.main(opt, coreset_method=method)
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, required=True)
-    args = parser.parse_args()
-    return args
 
 if __name__ == '__main__':
     main()
