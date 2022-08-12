@@ -126,14 +126,16 @@ class CoresetMethod:
     def on_checkpoint(self, step_info):
         step = step_info['step']
         self.reschedule(step) 
-        self.write_stat(step)
+        self.write_stat(step_info)
          
-    def write_stat(self, step):
+    def write_stat(self, step_info):
+        step = step_info['step']
         file_name = 'forgetting_step_%d.jsonl' % step
         out_stat_file = os.path.join(self.out_dir, file_name)
         with open(out_stat_file, 'w') as f_o:
             for qid in self.data_stat:
                 item_stat = self.data_stat[qid]
+                item_stat['train_points'] = step_info['batch']
                 f_o.write(json.dumps(item_stat) + '\n')
 def main():
     opt = get_train_opt()
