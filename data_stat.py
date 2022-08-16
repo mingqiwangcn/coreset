@@ -1,13 +1,12 @@
 import json
 import glob
-from tqdm import tqdm
 import csv
 import numpy as np
+from tqdm import tqdm
 import os
-import glob
 
-def get_steps(upto_step):
-    data_file = './output/forgetting/train_5/forgetting_step_*.jsonl'
+def get_steps(train_name, upto_step):
+    data_file = './output/forgetting/%s/forgetting_step_*.jsonl' % train_name
     file_lst = glob.glob(data_file)
     
     step_lst = []
@@ -21,9 +20,9 @@ def get_steps(upto_step):
     step_lst.sort()
     return step_lst
 
-def get_step_forgettings(step):
+def get_step_forgettings(train_name, step):
     data_map = {}
-    data_file = './output/forgetting/train_5/forgetting_step_%d.jsonl' % step
+    data_file = './output/forgetting/%s/forgetting_step_%d.jsonl' % (train_name, step)
     with open(data_file) as f:
         for line in f:
             item = json.loads(line)
@@ -149,8 +148,8 @@ def gen_serial_block_report(block_size):
             mean_forgettings = forgettings / len(step_blocks)
             writer.writerow([step_block_desc, mean_forgettings])
 
-def get_forgetting_dist():
-    data_file = './output/forgetting/train_5/forgetting_sorted.jsonl'
+def get_forgetting_dist(train_name):
+    data_file = './output/forgetting/%s/forgetting_sorted.jsonl' % train_name
     col_names = ['forgetting', 'count']
     stat_map = {}
     with open(data_file) as f:
@@ -175,8 +174,8 @@ def get_forgetting_dist():
             writer.writerow([key, stat_map[key]])
      
 
-def read_data():
-    data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
+def read_data(dataset, base_name):
+    data_file = '../data/%s/coreset/train_data_%s.jsonl' % (dataset, base_name) # percent_5
     data_map = {}
     with open(forgetting_file) as f:
         for line in f:
@@ -186,12 +185,12 @@ def read_data():
     return data_map
 
 
-def gen_forgetting_data(step):
+def gen_forgetting_data(dataset, train_name, step):
     update_cnt_lst = [] 
     forgetting_lst = []
     data_learnable = []
     data_unlearnable = []
-    data_file = './output/forgetting/train_5/forgetting_step_%d.jsonl' % step
+    data_file = './output/forgetting/%s/%s/step_data/forgetting_step_%d.jsonl' % (dataset, train_name, step)
     with open(data_file) as f:
         for line in f:
             item = json.loads(line)
@@ -207,7 +206,7 @@ def gen_forgetting_data(step):
     data_learnable_sorted = sorted(data_learnable, key=sort_key)
     
     out_data = data_learnable_sorted + data_unlearnable
-    with open('./output/forgetting/train_5/forgetting_sorted.jsonl', 'w') as f_o:
+    with open('./output/forgetting/%s/%s/forgetting_sorted.jsonl' % (dataset, train_name), 'w') as f_o:
         for item in out_data:
             f_o.write(json.dumps(item) + '\n')
     
@@ -229,17 +228,21 @@ def gen_forgetting_data(step):
     )
 
 
-def gen_coreset(coreset_tag, up_to_rows, strategy_func):
-    data_file = '../data/NQ/coreset/train_data_percent_5.jsonl'
+def gen_coreset(dataset, base_name, train_name, coreset_tag, up_to_rows, strategy_func):
+    data_file = '../data/%s/coreset/train_data_%s.jsonl' % (dataset, base_name) # percent_5
     data = []
-    forgetting_file = './output/forgetting/train_5/forgetting_sorted.jsonl'
+    forgetting_file = './output/forgetting/%s/%s/forgetting_sorted.jsonl' % (dataset, train_name)
     with open(forgetting_file) as f:
         for line in f:
             item = json.loads(line)
             data.append(item)
     
     out_qid_set = strategy_func(data)
-    out_file = './output/forgetting/train_5/coreset/train_5_coreset_%s.jsonl' % coreset_tag
+    out_dir = './output/forgetting/%s/%s/coreset/' % (dataset, train_name)
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+    file_name = '%s_coreset_%s.jsonl' % (train_name, coreset_tag)
+    out_file = os.path.join(out_dir, file_name)
     f_o = open(out_file, 'w')
     with open(data_file) as f_2:
         for line in f_2:
@@ -274,16 +277,20 @@ def use_learnable_only(data):
 
 
 def main():
+    dataset = 'NQ'
+    base_name = 'percent_5'
+    train_name = 'train_5'
+    best_steps = 5937
+    gen_forgetting_data(dataset, train_name, best_steps)
+    gen_coreset(dataset, base_name, train_name, 'forgettable', None, remove_zero_forgetting)
+    gen_coreset(dataset, base_name, train_name, 'never_learnt', None, use_unlearnable_only)
+    gen_coreset(dataset, base_name, train_name, 'forgettable_unforgettable', None, use_learnable_only)
     #get_forgetting_dist(11874) 
-    #gen_coreset('fg_gt_0', None, remove_zero_forgetting)
-    #gen_coreset('fg_unlearnable', None, use_unlearnable_only)
-    #gen_coreset('fg_learnable', None, use_learnable_only)
     #verify_serials(11874)
     #write_serial_forgettings(11874)
     #gen_serial_report()
     #gen_serial_block_report(200)
-
-    gen_point_step_forgettings()
+    #gen_point_step_forgettings()
 
 if __name__ == '__main__':
     main()
