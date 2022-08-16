@@ -47,20 +47,16 @@ def get_train_percent(dataset):
             for line in out_data:
                 f_o.write(line)
 
-def get_train_num(dataset):
-    data_file = '../data/%s/coreset/train_data_percent_5.jsonl' % dataset
+def get_train_num(dataset, num_sample):
+    data_file = '../data/%s/coreset/train_data.jsonl' % dataset
     train_data = read_data(data_file)
-    #percent_lst = [80, 60, 40, 20, 10]
-    num_lst = [3858, 3758, 3658] 
-    for num_sample in tqdm(num_lst):
-        out_file = '../data/%s/coreset/train_data_p_5_num_%d.jsonl' % (dataset, num_sample)
-        if os.path.isfile(out_file):
-            raise ValueError('%s already exists' % out_file)
-        #num_sample = int(len(train_data) * percent / 100)
-        out_data = random.sample(train_data, num_sample)
-        with open(out_file, 'w') as f_o:
-            for line in out_data:
-                f_o.write(line)
+    out_file = '../data/%s/coreset/train_data_num_%d.jsonl' % (dataset, num_sample)
+    if os.path.isfile(out_file):
+        raise ValueError('%s already exists' % out_file)
+    out_data = random.sample(train_data, num_sample)
+    with open(out_file, 'w') as f_o:
+        for line in out_data:
+            f_o.write(line)
 
 def get_shapley_val_data():
     data_file = './open_domain_data/%s/coreset/dev_data.jsonl' % dataset
@@ -102,10 +98,10 @@ def sample_shapley_train_data():
             f_o.write(line)
 
 if __name__ == '__main__':
-    get_train_percent('TQA')
+    get_train_num('NQ', 1000)
+    #get_train_percent('TQA')
     #main_top_10('TQA')
     #add_question_id()    
-    #get_train_num()
     #get_shapley_val_data()
     #sample_shapley_train_data() 
     
