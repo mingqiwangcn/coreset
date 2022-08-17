@@ -285,10 +285,8 @@ def main():
     #gen_coreset(dataset, base_name, train_name, 'never_learnt', None, use_unlearnable_only)
     #gen_coreset(dataset, base_name, train_name, 'forgettable_unforgettable', None, use_learnable_only)
     
-    #verify_serials(dataset, train_name, best_steps)
-
-    #get_forgetting_dist(11874) 
-    #write_serial_forgettings(dataset, train_name, best_steps)
+    verify_serials(dataset, train_name, best_steps)
+    write_serial_forgettings(dataset, train_name, best_steps)
     report_step_forgettings(dataset, train_name)
     gen_point_step_forgettings(dataset, train_name)
 
