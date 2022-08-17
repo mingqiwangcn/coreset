@@ -5,7 +5,7 @@ fi
 dataset=$1
 tag=$2
 python ../fusion_reader/train_reader.py \
-        --train_data ../data/${datset}/coreset/train_data_p_5_num_${tag}.jsonl \
+        --train_data ../data/${dataset}/coreset/train_data_p_5_num_${tag}.jsonl \
         --eval_data ../data/${dataset}/coreset/dev_data.jsonl \
         --model_size base \
         --per_gpu_batch_size 1 \
