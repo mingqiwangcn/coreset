@@ -4,6 +4,7 @@ import csv
 import numpy as np
 from tqdm import tqdm
 import os
+import argparse
 
 def get_steps(dataset, train_name, upto_step):
     data_file = './output/forgetting/%s/%s/step_data/forgetting_step_*.jsonl' % (dataset, train_name)
@@ -275,10 +276,11 @@ def use_learnable_only(data):
 
 
 def main():
-    dataset = 'NQ'
-    base_name = 'percent_5'
-    train_name = 'train_5'
-    best_steps = 1 # change it to the best steps 
+    args = get_args()
+    dataset = args.dataset
+    base_name = args.base_name
+    train_name = args.train_name
+    best_steps = args.best_steps # change it to the best steps 
     
     #gen_forgetting_data(dataset, train_name, best_steps)
     #gen_coreset(dataset, base_name, train_name, 'forgettable', None, remove_zero_forgetting)
@@ -289,6 +291,17 @@ def main():
     write_serial_forgettings(dataset, train_name, best_steps)
     report_step_forgettings(dataset, train_name)
     gen_point_step_forgettings(dataset, train_name)
+
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--base_name', type=str, required=True)
+    parser.add_argument('--train_name', type=str, required=True)
+    parser.add_argument('--best_steps', type=str, required=True)
+    args = parser.parse_args()
+    return args
+
 
 if __name__ == '__main__':
     main()
