@@ -298,7 +298,7 @@ def get_args():
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--base_name', type=str, required=True)
     parser.add_argument('--train_name', type=str, required=True)
-    parser.add_argument('--best_steps', type=str, required=True)
+    parser.add_argument('--best_steps', type=int, required=True)
     args = parser.parse_args()
     return args
 
