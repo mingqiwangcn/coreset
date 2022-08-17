@@ -11,7 +11,7 @@ python ../fusion_reader/train_reader.py \
         --model_size base \
         --per_gpu_batch_size 1 \
         --n_context 10 \
-        --name train_coreset_${tag} \
+        --name ${train_name}_coreset_${tag} \
         --checkpoint_dir ./output/forgetting/${dataset} \
         --use_auto_steps 1 \
         --epoch_ckp_num 2 \
