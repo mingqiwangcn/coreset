@@ -22,7 +22,7 @@ def get_train_opt():
     config = read_config() 
     
     checkpoint_dir = 'output' 
-    checkpoint_name = 'forgettings_part_1'
+    checkpoint_name = 'forgettings_nq_tables_part_1'
      
     train_args = argparse.Namespace(sql_batch_no=train_itr,
                                     do_train=True,
@@ -96,7 +96,7 @@ class CoresetMethod:
         qid = item['qid']
         del self.coreset_queue[qid] 
         self.other_queue[qid] = 1
-        item[CoresetMethod.Reschedule_Step_Key] = step + 32 
+        item[CoresetMethod.Reschedule_Step_Key] = step + random.randint(5, 10) 
         
     def other_2_coreset(self, qid):
         del self.other_queue[qid]
