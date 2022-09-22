@@ -9,24 +9,22 @@ import uuid
 import finetune_table_retr as model_trainer
 
 def read_config():
-    with open('/home/cc/code/open_table_discovery/trainer.config') as f:
+    with open('../open_table_discovery/trainer.config') as f:
        config = json.load(f)
     return config
 
 def get_train_opt(args):
-    work_dir = '/home/cc/code'
+    work_dir = args.work_dir 
     train_itr = 0
-    train_file = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/train_0/rel_graph/data_parts/part_%s.jsonl' % (args.dataset, args.part_no)
-    eval_file = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/dev/rel_graph/fusion_retrieved_tagged.jsonl' % args.dataset
-  
+    train_file = args.train_file
+    eval_file = None 
     config = read_config() 
-    
-    checkpoint_dir = './output/forgetting/%s/part_%s/' % (args.dataset, args.part_no) 
+    checkpoint_dir = args.out_dir 
     bnn_opt = 0 #int(config['bnn'])
     if bnn_opt:
-        checkpoint_name = 'train_bnn'
+        checkpoint_name = 'fg_data_bnn'
     else:
-        checkpoint_name = 'train'
+        checkpoint_name = 'fg_data'
      
     train_args = argparse.Namespace(sql_batch_no=train_itr,
                                     do_train=True,
@@ -163,8 +161,9 @@ class CoresetMethod:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', type=str, required=True)
-    parser.add_argument('--part_no', type=str, required=True)
+    parser.add_argument('--work_dir', type=str, required=True)
+    parser.add_argument('--train_file', type=str, required=True)
+    parser.add_argument('--out_dir', type=str, required=True)
     args = parser.parse_args()
     return args
 
