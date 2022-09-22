@@ -6,23 +6,27 @@ import random
 import os
 import argparse
 import uuid
-import finetune_table_retr_coreset as model_trainer
+import finetune_table_retr as model_trainer
 
 def read_config():
     with open('/home/cc/code/open_table_discovery/trainer.config') as f:
        config = json.load(f)
     return config
 
-def get_train_opt():
+def get_train_opt(args):
     work_dir = '/home/cc/code'
     train_itr = 0
-    train_file = '/home/cc/code/open_table_discovery/table2question/dataset/nq_tables/sql_data/train_0/rel_graph/data_parts/part_1.jsonl'
-    eval_file = '/home/cc/code/open_table_discovery/table2question/dataset/nq_tables/sql_data/dev/rel_graph/fusion_retrieved_tagged.jsonl'
+    train_file = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/train_0/rel_graph/data_parts/part_%s.jsonl' % (args.dataset, args.part_no)
+    eval_file = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/dev/rel_graph/fusion_retrieved_tagged.jsonl' % args.dataset
   
     config = read_config() 
     
-    checkpoint_dir = 'output' 
-    checkpoint_name = 'forgettings_nq_tables_part_1'
+    checkpoint_dir = './output/forgetting/%s/part_%s/' % (args.dataset, args.part_no) 
+    bnn_opt = 0 #int(config['bnn'])
+    if bnn_opt:
+        checkpoint_name = 'train_bnn'
+    else:
+        checkpoint_name = 'train'
      
     train_args = argparse.Namespace(sql_batch_no=train_itr,
                                     do_train=True,
@@ -38,7 +42,7 @@ def get_train_opt():
                                     max_epoch=int(config['max_epoch']),
                                     patience_steps=int(config['patience_steps']),
                                     ckp_steps=int(config['ckp_steps']),
-                                    bnn=int(config['bnn']),
+                                    bnn=bnn_opt,
                                     text_maxlength=int(config['text_maxlength']),
                                     fusion_retr_model=None,
                                     prior_model=None,
@@ -59,7 +63,12 @@ class CoresetMethod:
         self.data_stat = {}
         step_data_dir = os.path.join(out_dir, 'step_data')
         self.out_dir = step_data_dir
-            
+        self.counter = 0
+        self.mean_changes = 0
+    
+    def set_epoch_steps(self, epoch_steps):
+        self.epoch_steps = epoch_steps
+     
     def update_forgettings(self, qid, acc, step_info):
         step = step_info['step']
         item = self.data_stat[qid]
@@ -80,8 +89,8 @@ class CoresetMethod:
             if item[CoresetMethod.First_Correct_Step_Key] is None:
                 item[CoresetMethod.First_Correct_Step_Key] = step
         
-        if item[CoresetMethod.Not_Change_Steps_Key] >= 2:
-            self.coreset_2_other(item, step)
+        #if item[CoresetMethod.Not_Change_Steps_Key] >= 2:
+        self.coreset_2_other(item, step)
     
     def get_coreset(self, train_qid_batch):
         if train_qid_batch is not None:
@@ -96,7 +105,9 @@ class CoresetMethod:
         qid = item['qid']
         del self.coreset_queue[qid] 
         self.other_queue[qid] = 1
-        item[CoresetMethod.Reschedule_Step_Key] = step + random.randint(5, 10) 
+        waiting_steps_1 = min(1, self.epoch_steps) #min(1, self.epoch_steps)
+        waiting_steps_2 = min(10, self.epoch_steps)
+        item[CoresetMethod.Reschedule_Step_Key] = step + random.randint(waiting_steps_1, waiting_steps_2) 
         
     def other_2_coreset(self, qid):
         del self.other_queue[qid]
@@ -129,6 +140,7 @@ class CoresetMethod:
                 self.other_2_coreset(qid)
 
     def do(self, dataset, idxes, coreset_metrics, step_info):
+        self.counter += 1
         for offset, idx in enumerate(idxes):
             qid = dataset.get_example(idx)['id']
             acc = coreset_metrics[offset] 
@@ -148,15 +160,26 @@ class CoresetMethod:
                 item_stat = self.data_stat[qid]
                 item_stat['train_points'] = step_info['batch']
                 f_o.write(json.dumps(item_stat) + '\n')
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--part_no', type=str, required=True)
+    args = parser.parse_args()
+    return args
+
 def main():
-    opt = get_train_opt()
+    global logger
+    logger = logging.getLogger(__name__)
+    args = get_args()
+    opt = get_train_opt(args)
     out_dir = os.path.join(opt.checkpoint_dir, opt.name)
     if os.path.isdir(out_dir):
         print('%s already exists' % out_dir)
         return
+
     method = CoresetMethod(out_dir)
     model_trainer.main(opt, coreset_method=method)
-
 
 if __name__ == '__main__':
     main()
