@@ -179,12 +179,12 @@ def read_data(dataset, base_name):
     return data_map
 
 
-def gen_forgetting_data(dataset, part_no, train_name, step):
+def gen_forgetting_data(dataset, mode, train_name, step):
     update_cnt_lst = [] 
     forgetting_lst = []
     data_learnable = []
     data_unlearnable = []
-    data_file = './output/forgetting/%s/%s/%s/step_data/forgetting_step_%d.jsonl' % (dataset, part_no, train_name, step)
+    data_file = './output/forgetting/%s/%s/%s/step_data/forgetting_step_%d.jsonl' % (dataset, mode, train_name, step)
     with open(data_file) as f:
         for line in f:
             item = json.loads(line)
@@ -200,7 +200,7 @@ def gen_forgetting_data(dataset, part_no, train_name, step):
     data_learnable_sorted = sorted(data_learnable, key=sort_key)
     
     out_data = data_learnable_sorted + data_unlearnable
-    out_dir = './output/forgetting/%s/%s/%s/report' % (dataset, part_no, train_name)
+    out_dir = './output/forgetting/%s/%s/%s/report' % (dataset, mode, train_name)
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
     file_name = 'forgetting_sorted.jsonl'
@@ -228,20 +228,19 @@ def gen_forgetting_data(dataset, part_no, train_name, step):
     #)
 
 
-def gen_coreset(dataset, part_no, train_name, coreset_tag, up_to_rows, strategy_func):
-    data_file = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/train_0/rel_graph/data_parts/%s.jsonl' % (dataset, part_no)
+def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, strategy_func):
     data = []
-    forgetting_file = './output/forgetting/%s/%s/%s/report/forgetting_sorted.jsonl' % (dataset, part_no, train_name)
+    forgetting_file = './output/forgetting/%s/%s/%s/report/forgetting_sorted.jsonl' % (dataset, mode, train_name)
     with open(forgetting_file) as f:
         for line in f:
             item = json.loads(line)
             data.append(item)
     
     out_qid_set = strategy_func(data)
-    out_dir = './output/forgetting/%s/%s/%s/coreset/' % (dataset, part_no, train_name)
+    out_dir = './output/forgetting/%s/%s/%s/coreset/' % (dataset, mode, train_name)
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
-    file_name = '%s_%s.jsonl' % (part_no, coreset_tag)
+    file_name = '%s.jsonl' % (coreset_tag)
     out_file = os.path.join(out_dir, file_name)
     f_o = open(out_file, 'w')
     with open(data_file) as f_2:
@@ -280,12 +279,8 @@ def use_learnable_only(data):
 
 def main():
     args = get_args()
-    dataset = args.dataset
-    train_name = args.train_name
-    best_steps = args.best_steps # change it to the best steps 
-    
-    gen_forgetting_data(dataset, args.part_no,  train_name, best_steps)
-    gen_coreset(dataset, args.part_no, train_name, 'forgettable_never_learnt', None, remove_unforgettable)
+    gen_forgetting_data(args.dataset, args.mode,  args.train_name, args.best_step)
+    gen_coreset(args.data_file, args.dataset, args.mode, args.train_name, args.coreset_tag, remove_unforgettable)
     #gen_coreset(dataset, base_name, train_name, 'never_learnt', None, use_unlearnable_only)
     #gen_coreset(dataset, base_name, train_name, 'forgettable_unforgettable', None, use_learnable_only)
     
@@ -297,10 +292,12 @@ def main():
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data_file', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
-    parser.add_argument('--part_no', type=str, required=True)
+    parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--train_name', type=str, required=True)
-    parser.add_argument('--best_steps', type=int, required=True)
+    parser.add_argument('--coreset_tag', type=str, required=True)
+    parser.add_argument('--best_step', type=int, required=True)
     args = parser.parse_args()
     return args
 

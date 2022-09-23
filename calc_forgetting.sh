@@ -5,9 +5,9 @@ fi
 dataset=$1
 mode=$2
 if [ "${mode}" = "dev" ]; then
-    train_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/fusion_retrieved_tagged.jsonl
+    train_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/fusion_retrieved_tagged_fg.jsonl
 fi
-out_dir=output/forgetting/${dataset}/dev
+out_dir=output/forgetting/${dataset}/${mode}
 echo ${train_file}
 echo ${out_dir}
 python ./forgetting_table.py \
