@@ -275,7 +275,7 @@ def coreset_fg(mode, data, coreset_size_or_ratio):
             forgetting_lst.append(item['qid']) 
         elif item['first_correct_step'] is None:
             never_learnt_lst.append(item['qid'])
-    if coreset_size is None:
+    if (mode != 'dev') or (coreset_size is None):
         qid_set = set(forgetting_lst + never_learnt_lst)
     else:
         num_forgetting = len(forgetting_lst)
