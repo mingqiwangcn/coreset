@@ -246,7 +246,7 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
     if mode == 'dev':
         file_name = '%s.jsonl' % (coreset_tag)
     else:
-        file_name = '%s_%s.jsonl' % (part, coreset_tag)
+        file_name = 'data_parts/%s_%s.jsonl' % (part, coreset_tag)
     out_file = os.path.join(out_exp_dir, file_name)
     if os.path.isfile(out_file):
         raise ValueError('%s already exists' % out_file)
