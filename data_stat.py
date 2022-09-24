@@ -254,7 +254,6 @@ def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, coreset_size,
 
 
 def coreset_fg(data, coreset_size=None):
-    import pdb; pdb.set_trace()
     qid_set = set()
     forgetting_lst = []
     never_learnt_lst = []
@@ -269,11 +268,11 @@ def coreset_fg(data, coreset_size=None):
         num_forgetting = len(forgetting_lst)
         num_never_learnt = len(never_learnt_lst)
         total = num_forgetting + num_never_learnt 
-        if total > 0:
-            forgetting_coreset_size = (num_forgetting / total) * coreset_size
+        if total > coreset_size :
+            forgetting_coreset_size = int((num_forgetting / total) * coreset_size)
             never_learn_coreset_size = coreset_size - forgetting_coreset_size
-            coreset_items = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
-            qid_set = [a['qid'] for a in coreset_items]
+            coreset_qid_lst = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
+            qid_set = set(coreset_qid_lst)
         else:
             qid_set = [a['qid'] for a in data][-coreset_size:]
          
