@@ -37,7 +37,7 @@ def get_train_opt(args):
                                     cuda=0,
                                     name=checkpoint_name,
                                     checkpoint_dir=checkpoint_dir,
-                                    max_epoch=int(config['max_epoch']),
+                                    max_epoch=2,
                                     patience_steps=int(config['patience_steps']),
                                     ckp_steps=int(config['ckp_steps']),
                                     bnn=bnn_opt,
