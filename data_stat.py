@@ -228,7 +228,7 @@ def gen_forgetting_data(dataset, mode, train_name, step):
     #)
 
 
-def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, strategy_func):
+def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, coreset_size, strategy_func):
     data = []
     forgetting_file = './output/forgetting/%s/%s/%s/report/forgetting_sorted.jsonl' % (dataset, mode, train_name)
     with open(forgetting_file) as f:
@@ -236,7 +236,7 @@ def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, strategy_func
             item = json.loads(line)
             data.append(item)
     
-    out_qid_set = strategy_func(data)
+    out_qid_set = strategy_func(data, coreset_size=coreset_size)
     out_dir = './output/forgetting/%s/%s/%s/coreset/' % (dataset, mode, train_name)
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
@@ -252,6 +252,32 @@ def gen_coreset(data_file, dataset, mode, train_name, coreset_tag, strategy_func
     print('out coreset, %s' % out_file)
     f_o.close()
 
+
+def coreset_fg(data, coreset_size=None):
+    import pdb; pdb.set_trace()
+    qid_set = set()
+    forgetting_lst = []
+    never_learnt_lst = []
+    for item in data:
+        if item['forgetting'] > 0:
+            forgetting_lst.append(item['qid']) 
+        elif item['first_correct_step'] is None:
+            never_learnt_lst.append(item['qid'])
+    if coreset_size is None:
+        qid_set = set(forgetting_lst + never_learnt_lst)
+    else:
+        num_forgetting = len(forgetting_lst)
+        num_never_learnt = len(never_learnt_lst)
+        total = num_forgetting + num_never_learnt 
+        if total > 0:
+            forgetting_coreset_size = (num_forgetting / total) * coreset_size
+            never_learn_coreset_size = coreset_size - forgetting_coreset_size
+            coreset_items = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
+            qid_set = [a['qid'] for a in coreset_items]
+        else:
+            qid_set = [a['qid'] for a in data][-coreset_size:]
+         
+    return qid_set
 
 def remove_unforgettable(data):
     qid_set = set()
@@ -280,7 +306,8 @@ def use_learnable_only(data):
 def main():
     args = get_args()
     gen_forgetting_data(args.dataset, args.mode,  args.train_name, args.best_step)
-    gen_coreset(args.data_file, args.dataset, args.mode, args.train_name, args.coreset_tag, remove_unforgettable)
+    gen_coreset(args.data_file, args.dataset, args.mode, 
+                args.train_name, args.coreset_tag, args.coreset_size, coreset_fg)
     #gen_coreset(dataset, base_name, train_name, 'never_learnt', None, use_unlearnable_only)
     #gen_coreset(dataset, base_name, train_name, 'forgettable_unforgettable', None, use_learnable_only)
     
@@ -297,6 +324,7 @@ def get_args():
     parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--train_name', type=str, required=True)
     parser.add_argument('--coreset_tag', type=str, required=True)
+    parser.add_argument('--coreset_size', type=int, required=True)
     parser.add_argument('--best_step', type=int, required=True)
     args = parser.parse_args()
     return args

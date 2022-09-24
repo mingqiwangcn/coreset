@@ -6,9 +6,7 @@ dataset=$1
 mode=$2
 coreset_tag=$3
 best_step=$4
-if [ "${mode}" = "dev" ]; then
-    data_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/fusion_retrieved_tagged_fg.jsonl
-fi
+data_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/fusion_retrieved_tagged.jsonl
 out_dir=output/forgetting/${dataset}/${mode}
 echo ${train_file}
 echo ${out_dir}
