@@ -6,11 +6,12 @@ dataset=$1
 mode=$2
 if [ "${mode}" = "dev" ]; then
     data_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/fusion_retrieved_tagged_fg.jsonl
+    out_dir=output/forgetting/${dataset}/${mode}
 else
     part_no=$3
     data_file=/home/cc/code/open_table_discovery/table2question/dataset/${dataset}/sql_data/${mode}/rel_graph/data_parts/${part_no}.jsonl
+    out_dir=output/forgetting/${dataset}/${mode}/${part_no}
 fi
-out_dir=output/forgetting/${dataset}/${mode}/${part_no}
 echo ${data_file}
 echo ${out_dir}
 python ./forgetting_table.py \
