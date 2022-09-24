@@ -240,7 +240,7 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
             item = json.loads(line)
             data.append(item)
     
-    out_qid_set = strategy_func(mode, data, coreset_size=coreset_size)
+    out_qid_set = strategy_func(mode, data, coreset_size)
     
     out_exp_dir = '/home/cc/code/open_table_discovery/table2question/dataset/fetaqa/sql_data/%s/rel_graph' % mode
     if mode == 'dev':
@@ -261,7 +261,12 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
     f_o.close()
 
 
-def coreset_fg(mode, data, coreset_size):
+def coreset_fg(mode, data, coreset_size_or_ratio):
+    assert(coreset_size_or_ratio > 0)
+    if coreset_size_or_ratio < 1:
+        coreset_size = int(len(data) * coreset_size_or_ratio)
+    else:
+        coreset_size = coreset_size_or_ratio
     qid_set = set()
     forgetting_lst = []
     never_learnt_lst = []
@@ -270,7 +275,7 @@ def coreset_fg(mode, data, coreset_size):
             forgetting_lst.append(item['qid']) 
         elif item['first_correct_step'] is None:
             never_learnt_lst.append(item['qid'])
-    if (mode != 'dev') or (coreset_size is None):
+    if coreset_size is None:
         qid_set = set(forgetting_lst + never_learnt_lst)
     else:
         num_forgetting = len(forgetting_lst)
@@ -331,7 +336,7 @@ def get_args():
     parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--part', type=str, required=True)
     parser.add_argument('--coreset_tag', type=str, required=True)
-    parser.add_argument('--coreset_size', type=int, required=True)
+    parser.add_argument('--coreset_size', type=float, required=True)
     parser.add_argument('--best_step', type=int, required=True)
     args = parser.parse_args()
     return args
