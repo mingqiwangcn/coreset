@@ -204,7 +204,7 @@ def gen_forgetting_data(dataset, mode, part, step):
     data_learnable_sorted = sorted(data_learnable, key=sort_key)
     
     out_data = data_learnable_sorted + data_unlearnable
-    out_dir = './output/forgetting/%s/%s/%s/fg_data/report' % (dataset, mode, part)
+    out_dir = './output/forgetting/%s/%s/%s/fg_data_bnn/report' % (dataset, mode, part)
     if not os.path.isdir(out_dir):
         os.makedirs(out_dir)
     file_name = 'forgetting_sorted.jsonl'
@@ -234,7 +234,7 @@ def gen_forgetting_data(dataset, mode, part, step):
 
 def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strategy_func):
     data = []
-    forgetting_file = './output/forgetting/%s/%s/%s/fg_data/report/forgetting_sorted.jsonl' % (dataset, mode, part)
+    forgetting_file = './output/forgetting/%s/%s/%s/fg_data_bnn/report/forgetting_sorted.jsonl' % (dataset, mode, part)
     with open(forgetting_file) as f:
         for line in f:
             item = json.loads(line)
@@ -274,13 +274,18 @@ def coreset_fg(mode, data, str_coreset_size_or_ratio):
     qid_set = set()
     forgetting_lst = []
     never_learnt_lst = []
+    unforgettable = []
     for item in data:
         if item['forgetting'] > 0:
             forgetting_lst.append(item['qid']) 
         elif item['first_correct_step'] is None:
             never_learnt_lst.append(item['qid'])
+        else:
+            unforgettable.append(item['qid'])
+
     if (mode != 'dev') or (coreset_size is None):
         qid_set = set(forgetting_lst + never_learnt_lst)
+
     else:
         num_forgetting = len(forgetting_lst)
         num_never_learnt = len(never_learnt_lst)
