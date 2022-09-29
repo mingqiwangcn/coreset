@@ -7,6 +7,7 @@ import os
 import argparse
 import uuid
 import finetune_table_retr as model_trainer
+import custom_trainer
 
 def read_config():
     with open('../open_table_discovery/trainer.config') as f:
@@ -20,7 +21,7 @@ def get_train_opt(args):
     eval_file = None 
     config = read_config() 
     checkpoint_dir = args.out_dir 
-    bnn_opt = 0 #int(config['bnn'])
+    bnn_opt = 1 #int(config['bnn'])
     if bnn_opt:
         checkpoint_name = 'fg_data_bnn'
     else:
@@ -37,7 +38,7 @@ def get_train_opt(args):
                                     cuda=0,
                                     name=checkpoint_name,
                                     checkpoint_dir=checkpoint_dir,
-                                    max_epoch=2,
+                                    max_epoch=1,
                                     patience_steps=int(config['patience_steps']),
                                     ckp_steps=int(config['ckp_steps']),
                                     bnn=bnn_opt,
@@ -66,6 +67,7 @@ class CoresetMethod:
     
     def set_epoch_steps(self, epoch_steps):
         self.epoch_steps = epoch_steps
+        self.uni_waiting_steps = int(self.epoch_steps / 30)
      
     def update_forgettings(self, qid, acc, step_info):
         step = step_info['step']
@@ -88,7 +90,7 @@ class CoresetMethod:
                 item[CoresetMethod.First_Correct_Step_Key] = step
         
         #if item[CoresetMethod.Not_Change_Steps_Key] >= 2:
-        self.coreset_2_other(item, step)
+        #self.coreset_2_other(item, step)
     
     def get_coreset(self, train_qid_batch):
         if train_qid_batch is not None:
@@ -103,9 +105,10 @@ class CoresetMethod:
         qid = item['qid']
         del self.coreset_queue[qid] 
         self.other_queue[qid] = 1
-        waiting_steps_1 = min(1, self.epoch_steps) #min(1, self.epoch_steps)
-        waiting_steps_2 = min(10, self.epoch_steps)
-        item[CoresetMethod.Reschedule_Step_Key] = step + random.randint(waiting_steps_1, waiting_steps_2) 
+        #waiting_steps_1 = min(1, self.epoch_steps) #min(1, self.epoch_steps)
+        #waiting_steps_2 = min(10, self.epoch_steps)
+        item[CoresetMethod.Reschedule_Step_Key] = step + self.uni_waiting_steps
+        #item[CoresetMethod.Reschedule_Step_Key] = step +  random.randint(waiting_steps_1, waiting_steps_2) 
         
     def other_2_coreset(self, qid):
         del self.other_queue[qid]
@@ -146,7 +149,7 @@ class CoresetMethod:
 
     def on_checkpoint(self, step_info):
         step = step_info['step']
-        self.reschedule(step) 
+        #self.reschedule(step) 
         self.write_stat(step_info)
          
     def write_stat(self, step_info):
@@ -161,9 +164,11 @@ class CoresetMethod:
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_dir', type=str, required=True)
-    parser.add_argument('--train_file', type=str, required=True)
-    parser.add_argument('--out_dir', type=str, required=True)
+    parser.add_argument('--work_dir', type=str)
+    parser.add_argument('--data_dir', type=str)
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--part_no', type=str)
+    parser.add_argument('--out_dir', type=str)
     args = parser.parse_args()
     return args
 
@@ -171,14 +176,18 @@ def main():
     global logger
     logger = logging.getLogger(__name__)
     args = get_args()
-    opt = get_train_opt(args)
-    out_dir = os.path.join(opt.checkpoint_dir, opt.name)
-    if os.path.isdir(out_dir):
+    #opt = get_train_opt(args)
+    #out_dir = os.path.join(opt.checkpoint_dir, opt.name)
+   
+    out_dir = 'output/forgetting/%s/train_0/%s/fg_data_bnn' % (args.dataset, args.part_no)
+    opts = argparse.Namespace(out_dir=out_dir,
+                              data_dir=args.data_dir)
+    if os.path.isdir(opts.out_dir):
         print('%s already exists' % out_dir)
         return
 
     method = CoresetMethod(out_dir)
-    model_trainer.main(opt, coreset_method=method)
+    custom_trainer.main(opts, coreset_method=method)
 
 if __name__ == '__main__':
     main()

@@ -186,9 +186,9 @@ def gen_forgetting_data(dataset, mode, part, step):
     data_unlearnable = []
 
     if mode == 'dev':
-        data_file = './output/forgetting/%s/%s/fg_data/step_data/forgetting_step_%d.jsonl' % (dataset, mode, step)
+        data_file = './output/forgetting/%s/%s/fg_data_bnn/step_data/forgetting_step_%d.jsonl' % (dataset, mode, step)
     else:
-        data_file = './output/forgetting/%s/%s/%s/fg_data/step_data/forgetting_step_%d.jsonl' % (dataset, mode, part, step)
+        data_file = './output/forgetting/%s/%s/%s/fg_data_bnn/step_data/forgetting_step_%d.jsonl' % (dataset, mode, part, step)
     with open(data_file) as f:
         for line in f:
             item = json.loads(line)
@@ -261,12 +261,16 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
     f_o.close()
 
 
-def coreset_fg(mode, data, coreset_size_or_ratio):
-    assert(coreset_size_or_ratio > 0)
-    if coreset_size_or_ratio < 1:
-        coreset_size = int(len(data) * coreset_size_or_ratio)
+def coreset_fg(mode, data, str_coreset_size_or_ratio):
+    if str_coreset_size_or_ratio == 'none':
+        coreset_size = None
     else:
-        coreset_size = coreset_size_or_ratio
+        coreset_size_or_ratio = float(str_coreset_size_or_ratio)
+        assert(coreset_size_or_ratio > 0)
+        if coreset_size_or_ratio < 1:
+            coreset_size = int(len(data) * coreset_size_or_ratio)
+        else:
+            coreset_size = coreset_size_or_ratio
     qid_set = set()
     forgetting_lst = []
     never_learnt_lst = []
@@ -336,7 +340,7 @@ def get_args():
     parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--part', type=str, required=True)
     parser.add_argument('--coreset_tag', type=str, required=True)
-    parser.add_argument('--coreset_size', type=float, required=True)
+    parser.add_argument('--coreset_size', type=str, required=True)
     parser.add_argument('--best_step', type=int, required=True)
     args = parser.parse_args()
     return args
