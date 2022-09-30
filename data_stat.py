@@ -282,18 +282,22 @@ def coreset_fg(mode, data, str_coreset_size_or_ratio):
         else:
             unforgettable.append(item['qid'])
 
+    num_forgetting = len(forgetting_lst)
+    num_never_learnt = len(never_learnt_lst)
+    print('num_forgetting + num_never_learnt = ', num_forgetting + num_never_learnt)
     if (coreset_size is None):
         qid_set = set(forgetting_lst + never_learnt_lst)
 
     else:
-        num_forgetting = len(forgetting_lst)
-        num_never_learnt = len(never_learnt_lst)
         fg_total = num_forgetting + num_never_learnt 
         if fg_total >= coreset_size :
-            forgetting_coreset_size = int((num_forgetting / total) * coreset_size)
-            never_learn_coreset_size = coreset_size - forgetting_coreset_size
-            coreset_qid_lst = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
-            qid_set = set(coreset_qid_lst)
+            
+            qid_set = set(forgetting_lst + never_learnt_lst)
+
+            #forgetting_coreset_size = int((num_forgetting / total) * coreset_size)
+            #never_learn_coreset_size = coreset_size - forgetting_coreset_size
+            #coreset_qid_lst = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
+            #qid_set = set(coreset_qid_lst)
         else:
             num_sample_unforgettable = coreset_size - fg_total
             unforgettable_samples = random.sample(unforgettable, num_sample_unforgettable)
