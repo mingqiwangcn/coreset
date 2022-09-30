@@ -1,4 +1,5 @@
 import json
+import random
 import glob
 import csv
 import numpy as np
@@ -242,11 +243,8 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
     
     out_qid_set = strategy_func(mode, data, coreset_size)
     
-    out_exp_dir = '/home/cc/code/open_table_discovery/table2question/dataset/fetaqa/sql_data/%s/rel_graph' % mode
-    if mode == 'dev':
-        file_name = '%s.jsonl' % (coreset_tag)
-    else:
-        file_name = 'data_parts/%s_%s.jsonl' % (part, coreset_tag)
+    out_exp_dir = '/home/cc/code/open_table_discovery/table2question/dataset/%s/sql_data/%s/rel_graph' % (dataset, mode)
+    file_name = 'data_parts/%s_%s.jsonl' % (part, coreset_tag)
     out_file = os.path.join(out_exp_dir, file_name)
     if os.path.isfile(out_file):
         raise ValueError('%s already exists' % out_file)
@@ -262,6 +260,7 @@ def gen_coreset(data_file, dataset, mode, part, coreset_tag, coreset_size, strat
 
 
 def coreset_fg(mode, data, str_coreset_size_or_ratio):
+    #import pdb; pdb.set_trace()
     if str_coreset_size_or_ratio == 'none':
         coreset_size = None
     else:
@@ -270,7 +269,7 @@ def coreset_fg(mode, data, str_coreset_size_or_ratio):
         if coreset_size_or_ratio < 1:
             coreset_size = int(len(data) * coreset_size_or_ratio)
         else:
-            coreset_size = coreset_size_or_ratio
+            coreset_size = int(coreset_size_or_ratio)
     qid_set = set()
     forgetting_lst = []
     never_learnt_lst = []
@@ -283,20 +282,22 @@ def coreset_fg(mode, data, str_coreset_size_or_ratio):
         else:
             unforgettable.append(item['qid'])
 
-    if (mode != 'dev') or (coreset_size is None):
+    if (coreset_size is None):
         qid_set = set(forgetting_lst + never_learnt_lst)
 
     else:
         num_forgetting = len(forgetting_lst)
         num_never_learnt = len(never_learnt_lst)
-        total = num_forgetting + num_never_learnt 
-        if total > coreset_size :
+        fg_total = num_forgetting + num_never_learnt 
+        if fg_total >= coreset_size :
             forgetting_coreset_size = int((num_forgetting / total) * coreset_size)
             never_learn_coreset_size = coreset_size - forgetting_coreset_size
             coreset_qid_lst = forgetting_lst[-forgetting_coreset_size:] + never_learnt_lst[-never_learn_coreset_size:]
             qid_set = set(coreset_qid_lst)
         else:
-            qid_set = [a['qid'] for a in data][-coreset_size:]
+            num_sample_unforgettable = coreset_size - fg_total
+            unforgettable_samples = random.sample(unforgettable, num_sample_unforgettable)
+            qid_set = set(unforgettable_samples + forgetting_lst + never_learnt_lst)
          
     return qid_set
 
