@@ -313,7 +313,7 @@ def remove_unforgettable(data):
     return qid_set
 
 
-def use_unlearnable_only(data):
+def use_unlearnable_only(mode, data, coreset_size):
     qid_set = set()
     for item in data:
         if item['first_correct_step'] is None:
@@ -321,7 +321,7 @@ def use_unlearnable_only(data):
     return qid_set
 
 
-def use_learnable_only(data):
+def use_learnable_only(mode, data, coreset_size):
     qid_set = set()
     for item in data:
         if item['first_correct_step'] is not None:
@@ -333,7 +333,7 @@ def main():
     args = get_args()
     gen_forgetting_data(args.dataset, args.mode, args.part, args.best_step)
     gen_coreset(args.data_file, args.dataset, args.mode, 
-                args.part, args.coreset_tag, args.coreset_size, coreset_fg)
+                args.part, args.coreset_tag, args.coreset_size, use_learnable_only)
     #gen_coreset(dataset, base_name, train_name, 'never_learnt', None, use_unlearnable_only)
     #gen_coreset(dataset, base_name, train_name, 'forgettable_unforgettable', None, use_learnable_only)
     
@@ -350,7 +350,7 @@ def get_args():
     parser.add_argument('--mode', type=str, required=True)
     parser.add_argument('--part', type=str, required=True)
     parser.add_argument('--coreset_tag', type=str, required=True)
-    parser.add_argument('--coreset_size', type=str, required=True)
+    parser.add_argument('--coreset_size', type=str)
     parser.add_argument('--best_step', type=int, required=True)
     args = parser.parse_args()
     return args
